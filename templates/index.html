@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}VRMS - Smart Fleet & Rental Management System{% endblock %}
+
+{% block content %}
+<div style="padding: 2.5rem 0 3.5rem 0; text-align: center;">
+  <span class="badge badge-confirmed" style="margin-bottom: 1rem; font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+    CIC-357 Software Engineering Lab Major Project
+  </span>
+  <h1 style="font-size: 2.85rem; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 1rem;">
+    Enterprise Vehicle Rental & Fleet Automation
+  </h1>
+  <p style="font-size: 1.15rem; color: #64748b; max-width: 780px; margin: 0 auto 2rem auto;">
+    A centralized web platform preventing overlapping bookings, managing strict vehicle state machines, automated pickup/return workflows, and high-performance green computing architecture.
+  </p>
+  
+  <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 3rem;">
+    <a href="{{ url_for('auth.login_page') }}" class="btn btn-primary" style="padding: 0.8rem 1.8rem; font-size: 1.05rem;">
+      Open VRMS Portal &rarr;
+    </a>
+    <a href="{{ url_for('auth.register_page') }}" class="btn btn-outline" style="padding: 0.8rem 1.8rem; font-size: 1.05rem;">
+      Create Customer Account
+    </a>
+  </div>
+
+  <!-- Demo Accounts Fast Selector Card -->
+  <div class="card" style="max-width: 900px; margin: 0 auto 3rem auto; text-align: left; background: #f8fafc; border: 2px dashed #cbd5e1;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+      <h3 style="font-size: 1.1rem; color: #0f172a;">⚡ Quick Evaluation Demo Logins (Click to Autofill)</h3>
+      <span class="badge badge-available">Ready to Demo</span>
+    </div>
+    <div class="grid-3" style="gap: 1rem;">
+      <div style="background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <span class="role-pill role-admin">Administrator</span>
+        <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+          <p><strong>Email:</strong> admin@vrms.com</p>
+          <p><strong>Password:</strong> admin123</p>
+          <a href="{{ url_for('auth.login_page') }}?email=admin@vrms.com&pass=admin123" class="btn btn-sm btn-outline" style="margin-top: 0.5rem; width: 100%;">Login as Admin</a>
+        </div>
+      </div>
+      <div style="background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <span class="role-pill role-staff">Rental Staff</span>
+        <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+          <p><strong>Email:</strong> staff@vrms.com</p>
+          <p><strong>Password:</strong> staff123</p>
+          <a href="{{ url_for('auth.login_page') }}?email=staff@vrms.com&pass=staff123" class="btn btn-sm btn-outline" style="margin-top: 0.5rem; width: 100%;">Login as Staff</a>
+        </div>
+      </div>
+      <div style="background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <span class="role-pill role-customer">Customer (Aarav Mehta)</span>
+        <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+          <p><strong>Email:</strong> aarav@gmail.com</p>
+          <p><strong>Password:</strong> cust123</p>
+          <a href="{{ url_for('auth.login_page') }}?email=aarav@gmail.com&pass=cust123" class="btn btn-sm btn-outline" style="margin-top: 0.5rem; width: 100%;">Login as Customer</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Architectural Highlights -->
+  <div class="grid-3" style="text-align: left;">
+    <div class="card">
+      <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🔒</div>
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem;">Overlapping Booking Prevention</h3>
+      <p style="color: #64748b; font-size: 0.9rem;">
+        Mathematical interval algorithm checks overlapping dates across active reservations, eliminating double-bookings completely.
+      </p>
+    </div>
+    <div class="card">
+      <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">⚙️</div>
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem;">Finite State Machine (FSM)</h3>
+      <p style="color: #64748b; font-size: 0.9rem;">
+        Strict state lifecycle: Available &rarr; Booked &rarr; Rented &rarr; Available / Under Maintenance &rarr; Retired with validation checks.
+      </p>
+    </div>
+    <div class="card">
+      <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🌱</div>
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem;">Green Software Architecture (Exp. 15)</h3>
+      <p style="color: #64748b; font-size: 0.9rem;">
+        In-memory TTL cache and projection-only search API slashes redundant database reads by 99% and reduces carbon emissions.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

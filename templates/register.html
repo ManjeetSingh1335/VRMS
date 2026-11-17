@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Register - VRMS Customer Account{% endblock %}
+
+{% block content %}
+<div style="max-width: 620px; margin: 1.5rem auto;">
+  <div class="card" style="box-shadow: var(--shadow-lg);">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <h2 style="font-size: 1.6rem; font-weight: 800; color: #0f172a;">Customer Registration</h2>
+      <p style="color: #64748b; font-size: 0.9rem; margin-top: 0.25rem;">
+        FR-1: Create your profile to search, reserve, and manage vehicle rentals
+      </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.register_page') }}">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label" for="name">Full Name *</label>
+          <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Aarav Mehta" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address *</label>
+          <input type="email" id="email" name="email" class="form-control" placeholder="aarav@example.com" required>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label" for="phone">Phone Number *</label>
+          <input type="tel" id="phone" name="phone" class="form-control" placeholder="+91-9876543210" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="license_number">Driving License Number *</label>
+          <input type="text" id="license_number" name="license_number" class="form-control" placeholder="DL-04-2022-0091" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="address">Residential Address *</label>
+        <textarea id="address" name="address" rows="2" class="form-control" placeholder="Street, Sector, City, State, PIN" required></textarea>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label" for="password">Password *</label>
+          <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="role">Account Type</label>
+          <select id="role" name="role" class="form-control">
+            <option value="Customer" selected>Customer</option>
+            <option value="Rental Staff">Rental Staff (Evaluation)</option>
+            <option value="Administrator">Administrator (Evaluation)</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
+        Complete Registration &rarr;
+      </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: #64748b;">
+      Already have an account? 
+      <a href="{{ url_for('auth.login_page') }}" style="color: var(--primary); font-weight: 600; text-decoration: none;">
+        Sign In here
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

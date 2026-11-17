@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}VRMS - Vehicle Rental Management System{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Green Computing Live Telemetry Banner (Exp. 15) -->
+  <div class="green-bar">
+    <div style="display: flex; align-items: center;">
+      <span class="green-badge">EXP. 15 GREEN COMPUTING</span>
+      <span>In-Memory TTL Caching & Query Projection Active</span>
+    </div>
+    <div id="greenMetricsDisplay">
+      <span>Loading green telemetry...</span>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="{{ url_for('auth.index') }}" class="brand">
+        <span class="brand-badge">VRMS</span>
+        <span>Vehicle Rental System</span>
+      </a>
+
+      <ul class="nav-links">
+        {% if session.get('user_id') %}
+          {% if session.get('user_role') == 'Administrator' %}
+            <li><a href="{{ url_for('admin.admin_dashboard') }}" class="nav-link">Admin Dashboard</a></li>
+            <li><a href="{{ url_for('staff.staff_panel') }}" class="nav-link">Staff Panel</a></li>
+            <li><a href="{{ url_for('customer.customer_dashboard') }}" class="nav-link">Customer View</a></li>
+          {% elif session.get('user_role') == 'Rental Staff' %}
+            <li><a href="{{ url_for('staff.staff_panel') }}" class="nav-link">Staff Pickup & Return</a></li>
+          {% else %}
+            <li><a href="{{ url_for('customer.customer_dashboard') }}" class="nav-link">Search & Book</a></li>
+          {% endif %}
+
+          <li>
+            <div class="user-badge">
+              <span>{{ session.get('user_name') }}</span>
+              <span class="role-pill {% if session.get('user_role') == 'Administrator' %}role-admin{% elif session.get('user_role') == 'Rental Staff' %}role-staff{% else %}role-customer{% endif %}">
+                {{ session.get('user_role') }}
+              </span>
+            </div>
+          </li>
+          <li><a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline">Logout</a></li>
+        {% else %}
+          <li><a href="{{ url_for('auth.index') }}" class="nav-link">Home</a></li>
+          <li><a href="{{ url_for('auth.login_page') }}" class="btn btn-sm btn-outline">Sign In</a></li>
+          <li><a href="{{ url_for('auth.register_page') }}" class="btn btn-sm btn-primary">Register</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Flash Messages -->
+  <div class="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alerts-container">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{{ message }}</span>
+              <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:inherit;">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div style="max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+      <p><strong>Vehicle Rental Management System (VRMS)</strong> | Software Engineering Lab (CIC-357)</p>
+      <p style="font-size: 0.8rem; color: #94a3b8;">
+        Maharaja Agrasen Institute of Technology (MAIT), Guru Gobind Singh Indraprastha University (GGSIPU), Delhi
+      </p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

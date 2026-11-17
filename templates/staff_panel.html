@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Rental Staff Desk - VRMS{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: #0f172a;">Rental Staff Counter</h1>
+      <p style="color: #64748b; font-size: 0.95rem;">
+        Vehicle Handover (Pickup), Inspection, Return Processing (UC-08), and Receipt Generation (FR-6)
+      </p>
+    </div>
+  </div>
+
+  <!-- Search & Lookup Booking Card -->
+  <div class="card">
+    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">
+      🔍 Verify & Load Booking Record
+    </h3>
+    <div style="display: flex; gap: 1rem; max-width: 600px;">
+      <input type="number" id="lookupBookingId" class="form-control" placeholder="Enter Booking ID (e.g. 1, 501)" autofocus>
+      <button class="btn btn-primary" onclick="lookupBooking()">Lookup Contract</button>
+    </div>
+  </div>
+
+  <!-- Contract Details & Action Panels (Dynamically Loaded) -->
+  <div id="bookingDetailsCard" class="card" style="display: none;">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Booking Contract <span id="dispBookingId">#-</span></h3>
+        <p style="font-size: 0.85rem; color: #64748b;" id="dispBookingTime">-</p>
+      </div>
+      <div>
+        <span id="dispBookingStatus" class="badge badge-confirmed">Confirmed</span>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-bottom: 1.5rem;">
+      <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #64748b;">Customer Information</span>
+        <h4 id="dispCustName" style="font-size: 1.1rem; color: #0f172a; margin-top: 0.25rem;">-</h4>
+        <p id="dispCustEmail" style="font-size: 0.85rem; color: #64748b;">-</p>
+        <p id="dispCustPhone" style="font-size: 0.85rem; color: #64748b;">-</p>
+      </div>
+
+      <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #64748b;">Assigned Vehicle</span>
+        <h4 id="dispVehModel" style="font-size: 1.1rem; color: #0f172a; margin-top: 0.25rem;">-</h4>
+        <p id="dispVehReg" style="font-size: 0.85rem; color: #64748b;">-</p>
+        <p id="dispVehRate" style="font-size: 0.85rem; color: #2563eb; font-weight: 700;">₹0 / day</p>
+      </div>
+
+      <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #64748b;">Schedule & Finance</span>
+        <p id="dispDates" style="font-size: 0.9rem; font-weight: 600; margin-top: 0.25rem;">-</p>
+        <p id="dispRentAmount" style="font-size: 1.15rem; color: #059669; font-weight: 800;">₹0.00</p>
+        <p id="dispDepositPaid" style="font-size: 0.82rem; color: #166534;">Deposit Paid: ₹0.00</p>
+      </div>
+    </div>
+
+    <!-- PICKUP WORKFLOW (When Booking is Confirmed) -->
+    <div id="pickupSection" style="display: none; border-top: 2px dashed #cbd5e1; padding-top: 1.5rem;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem;">
+        🚀 Vehicle Handover (Pickup Action)
+      </h3>
+      <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.25rem;">
+        Verify customer driving license, inspect vehicle fuel/cleanliness, and record opening odometer.
+      </p>
+
+      <div class="grid-2" style="max-width: 600px;">
+        <div class="form-group">
+          <label class="form-label">Opening Odometer Reading (km) *</label>
+          <input type="number" id="pickupOdometer" class="form-control" step="0.1" required>
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+          <button class="btn btn-success" style="width: 100%; margin-bottom: 1.15rem;" onclick="submitPickup()">
+            Confirm Pickup & Handover Vehicle
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RETURN WORKFLOW UC-08 (When Booking is Active) -->
+    <div id="returnSection" style="display: none; border-top: 2px dashed #cbd5e1; padding-top: 1.5rem;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem;">
+        🏁 Process Vehicle Return (Formal Use Case UC-08)
+      </h3>
+      <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.25rem;">
+        Staff enters ending odometer, inspects physical condition, calculates late fine/damage charges, and collects final settlement.
+      </p>
+
+      <div class="grid-3">
+        <div class="form-group">
+          <label class="form-label">Closing Odometer (km) *</label>
+          <input type="number" id="returnOdometer" class="form-control" step="0.1" onchange="calculateReturnSettlement()" required>
+          <small style="color: #64748b;">Start Odo: <span id="dispStartOdo">0</span> km</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Actual Return Date & Time</label>
+          <input type="text" id="returnActualDate" class="form-control" placeholder="YYYY-MM-DD HH:MM (Leave blank for NOW)" onchange="calculateReturnSettlement()">
+          <small style="color: #64748b;">Scheduled: <span id="dispScheduledReturn">-</span></small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Damage Assessment Charge (₹)</label>
+          <input type="number" id="returnDamageFee" class="form-control" value="0" min="0" step="100" onchange="calculateReturnSettlement()">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Damage Notes & Physical Inspection Remarks</label>
+        <textarea id="returnDamageNotes" class="form-control" rows="2" placeholder="Describe any dents, scratches, or interior condition (or 'Vehicle in pristine condition')"></textarea>
+      </div>
+
+      <!-- Live Calculation Breakdown Box -->
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem;">
+        <h4 style="font-size: 1rem; font-weight: 700; color: #166534; margin-bottom: 0.75rem;">Return Financial Settlement Breakdown</h4>
+        <div class="grid-4" style="font-size: 0.9rem;">
+          <div>
+            <span style="color: #64748b;">Base Rental:</span><br>
+            <strong id="retBaseAmount">₹0.00</strong>
+          </div>
+          <div>
+            <span style="color: #64748b;">Late Return Fine:</span><br>
+            <strong id="retLateFee" style="color: #dc2626;">₹0.00</strong>
+          </div>
+          <div>
+            <span style="color: #64748b;">Damage Assessment:</span><br>
+            <strong id="retDamageFee" style="color: #ea580c;">₹0.00</strong>
+          </div>
+          <div>
+            <span style="color: #64748b;">Remaining Due:</span><br>
+            <strong id="retRemainingBalance" style="font-size: 1.25rem; color: #15803d;">₹0.00</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Method for Settlement -->
+      <div class="grid-2" style="align-items: flex-end;">
+        <div class="form-group">
+          <label class="form-label">Settlement Payment Method</label>
+          <select id="returnPaymentMethod" class="form-control">
+            <option value="Credit Card">Credit Card</option>
+            <option value="Debit Card">Debit Card</option>
+            <option value="UPI">UPI / QR Code</option>
+            <option value="Cash">Cash Handover</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #991b1b; cursor: pointer; margin-bottom: 0.6rem;">
+            <input type="checkbox" id="simulateReturnPaymentFailure">
+            <span>Simulate Settlement Payment Failure (UC-08 Step 7a)</span>
+          </label>
+        </div>
+      </div>
+
+      <button id="btnCompleteReturn" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;" onclick="submitReturn()">
+        Complete Return & Generate Official Receipt
+      </button>
+    </div>
+
+    <!-- COMPLETED WORKFLOW -->
+    <div id="completedSection" style="display: none; border-top: 2px dashed #cbd5e1; padding-top: 1.5rem; text-align: center;">
+      <h3 style="color: #15803d; font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">
+        ✅ Rental Successfully Completed
+      </h3>
+      <p style="color: #64748b; margin-bottom: 1.5rem;">
+        Vehicle has been returned to fleet inventory. All charges and transactions are finalized.
+      </p>
+      <a id="btnViewReceipt" href="#" target="_blank" class="btn btn-primary" style="padding: 0.75rem 1.75rem;">
+        View & Print Return Receipt &rarr;
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let activeBooking = null;
+let activeRental = null;
+
+async function lookupBooking() {
+    const bookingId = document.getElementById('lookupBookingId').value.trim();
+    if (!bookingId) {
+        showToast('Please enter a Booking ID.', 'warning');
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/staff/booking/${bookingId}`);
+        const data = await resp.json();
+
+        if (!data.success) {
+            showToast(data.error, 'danger');
+            document.getElementById('bookingDetailsCard').style.display = 'none';
+            return;
+        }
+
+        activeBooking = data.booking;
+        activeRental = data.rental;
+        renderBookingCard();
+    } catch (e) {
+        showToast('Lookup failed: ' + e.message, 'danger');
+    }
+}
+
+function renderBookingCard() {
+    const card = document.getElementById('bookingDetailsCard');
+    card.style.display = 'block';
+
+    document.getElementById('dispBookingId').innerText = `#${activeBooking.Booking_ID}`;
+    document.getElementById('dispBookingTime').innerText = `Created on: ${activeBooking.Booking_Date}`;
+    
+    const statusBadge = document.getElementById('dispBookingStatus');
+    statusBadge.className = `badge badge-${activeBooking.Booking_Status.toLowerCase()}`;
+    statusBadge.innerText = activeBooking.Booking_Status;
+
+    document.getElementById('dispCustName').innerText = activeBooking.Customer_Name;
+    document.getElementById('dispCustEmail').innerText = activeBooking.Customer_Email;
+    document.getElementById('dispCustPhone').innerText = activeBooking.Customer_Phone;
+
+    document.getElementById('dispVehModel').innerText = activeBooking.Vehicle_Model;
+    document.getElementById('dispVehReg').innerText = `Reg: ${activeBooking.Vehicle_Registration} (${activeBooking.Vehicle_Type})`;
+    document.getElementById('dispVehRate').innerText = `₹${activeBooking.Rental_Rate} / day`;
+
+    document.getElementById('dispDates').innerText = `${activeBooking.Pickup_Date} to ${activeBooking.Return_Date} (${activeBooking.Duration_Days} days)`;
+    document.getElementById('dispRentAmount').innerText = `Base Rent: ₹${activeBooking.Total_Amount.toFixed(2)}`;
+    document.getElementById('dispDepositPaid').innerText = `Paid so far: ₹${activeBooking.Total_Paid.toFixed(2)}`;
+
+    // Show appropriate sub-workflow based on status
+    const pickupSec = document.getElementById('pickupSection');
+    const returnSec = document.getElementById('returnSection');
+    const compSec = document.getElementById('completedSection');
+
+    pickupSec.style.display = 'none';
+    returnSec.style.display = 'none';
+    compSec.style.display = 'none';
+
+    if (activeBooking.Booking_Status === 'Confirmed') {
+        pickupSec.style.display = 'block';
+        document.getElementById('pickupOdometer').value = '';
+    } else if (activeBooking.Booking_Status === 'Active') {
+        returnSec.style.display = 'block';
+        if (activeRental) {
+            document.getElementById('dispStartOdo').innerText = activeRental.Start_Odometer;
+            document.getElementById('returnOdometer').value = activeRental.Start_Odometer + 150;
+        }
+        document.getElementById('dispScheduledReturn').innerText = activeBooking.Return_Date;
+        calculateReturnSettlement();
+    } else if (activeBooking.Booking_Status === 'Completed') {
+        compSec.style.display = 'block';
+        document.getElementById('btnViewReceipt').href = `/receipt/${activeBooking.Booking_ID}`;
+    }
+}
+
+async function submitPickup() {
+    if (!activeBooking) return;
+    const startOdo = parseFloat(document.getElementById('pickupOdometer').value);
+
+    try {
+        const resp = await fetch('/api/staff/pickup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking_id: activeBooking.Booking_ID,
+                start_odometer: isNaN(startOdo) ? null : startOdo
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            lookupBooking();
+        } else {
+            showToast(data.error, 'danger');
+        }
+    } catch (e) {
+        showToast(e.message, 'danger');
+    }
+}
+
+function calculateReturnSettlement() {
+    if (!activeBooking) return;
+
+    const baseAmount = activeBooking.Total_Amount;
+    const damageFee = parseFloat(document.getElementById('returnDamageFee').value || 0);
+
+    // Calculate late return days if actual return date is entered
+    let lateFee = 0.0;
+    const actualStr = document.getElementById('returnActualDate').value.trim();
+    if (actualStr) {
+        const actualDate = new Date(actualStr.replace(' ', 'T'));
+        const scheduledDate = new Date(activeBooking.Return_Date);
+        if (actualDate > scheduledDate) {
+            const diffDays = Math.ceil((actualDate - scheduledDate) / (1000 * 60 * 60 * 24));
+            if (diffDays > 0) {
+                lateFee = diffDays * (activeBooking.Rental_Rate * 1.5);
+            }
+        }
+    }
+
+    const totalContract = baseAmount + lateFee + damageFee;
+    const remaining = Math.max(0, totalContract - activeBooking.Total_Paid);
+
+    document.getElementById('retBaseAmount').innerText = `₹${baseAmount.toFixed(2)}`;
+    document.getElementById('retLateFee').innerText = `₹${lateFee.toFixed(2)}`;
+    document.getElementById('retDamageFee').innerText = `₹${damageFee.toFixed(2)}`;
+    document.getElementById('retRemainingBalance').innerText = `₹${remaining.toFixed(2)}`;
+}
+
+async function submitReturn() {
+    if (!activeBooking) return;
+
+    const endOdo = parseFloat(document.getElementById('returnOdometer').value);
+    const damageFee = parseFloat(document.getElementById('returnDamageFee').value || 0);
+    const damageNotes = document.getElementById('returnDamageNotes').value.trim();
+    const actualDate = document.getElementById('returnActualDate').value.trim();
+    const method = document.getElementById('returnPaymentMethod').value;
+    const simulateFailure = document.getElementById('simulateReturnPaymentFailure').checked;
+
+    if (isNaN(endOdo)) {
+        showToast('Please enter closing odometer reading.', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('btnCompleteReturn');
+    btn.disabled = true;
+    btn.innerText = 'Processing Settlement & Return...';
+
+    try {
+        const resp = await fetch('/api/staff/return', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking_id: activeBooking.Booking_ID,
+                end_odometer: endOdo,
+                damage_fee: damageFee,
+                damage_notes: damageNotes,
+                actual_return_date: actualDate || null,
+                payment_method: method,
+                simulate_payment_failure: simulateFailure
+            })
+        });
+
+        const data = await resp.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            lookupBooking();
+            // Open return receipt in new tab
+            window.open(`/receipt/${activeBooking.Booking_ID}`, '_blank');
+        } else {
+            showToast(data.error, 'danger');
+        }
+    } catch (e) {
+        showToast('Return processing failed: ' + e.message, 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Complete Return & Generate Official Receipt';
+    }
+}
+</script>
+{% endblock %}

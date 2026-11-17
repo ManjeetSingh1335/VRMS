@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - VRMS{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 2rem auto;">
+  <div class="card" style="box-shadow: var(--shadow-lg);">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <h2 style="font-size: 1.6rem; font-weight: 800; color: #0f172a;">Sign in to VRMS</h2>
+      <p style="color: #64748b; font-size: 0.9rem; margin-top: 0.25rem;">
+        Select your role or enter credentials to access your dashboard
+      </p>
+    </div>
+
+    <!-- Quick Auto-Fill Buttons for Demo -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 1.25rem;">
+      <p style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem; text-align: center;">
+        QUICK DEMO LOGIN SELECTOR:
+      </p>
+      <div style="display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-sm btn-outline" onclick="fillCredentials('admin@vrms.com', 'admin123')">Admin</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="fillCredentials('staff@vrms.com', 'staff123')">Staff</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="fillCredentials('aarav@gmail.com', 'cust123')">Customer 1</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="fillCredentials('priya@gmail.com', 'cust123')">Customer 2</button>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.login_page') }}">
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="name@example.com" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.75rem;">
+        Sign In &rarr;
+      </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: #64748b;">
+      Don't have an account? 
+      <a href="{{ url_for('auth.register_page') }}" style="color: var(--primary); font-weight: 600; text-decoration: none;">
+        Register here
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillCredentials(email, pass) {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = pass;
+}
+
+// Auto fill from URL query params if present
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('email')) {
+        document.getElementById('email').value = params.get('email');
+    }
+    if (params.get('pass')) {
+        document.getElementById('password').value = params.get('pass');
+    }
+});
+</script>
+{% endblock %}

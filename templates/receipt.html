@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Return Receipt #RCPT-{{ rental.Rental_ID:05d }} - VRMS</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2rem 1rem;
+      margin: 0;
+    }
+    .receipt-container {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 2.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .logo-badge {
+      background: #2563eb;
+      color: #fff;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.35rem;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+    }
+    .table th {
+      background: #f8fafc;
+      padding: 0.75rem;
+      text-align: left;
+      font-size: 0.85rem;
+      color: #475569;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.9rem;
+    }
+    .total-box {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-top: 1.5rem;
+      border: 1px solid #e2e8f0;
+    }
+    .btn-print {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .receipt-container { box-shadow: none; border: none; padding: 0; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="receipt-container">
+    <div class="no-print" style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+      <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+
+    <div class="header">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span class="logo-badge">VRMS</span>
+          <h2 style="margin: 0; font-size: 1.4rem;">Vehicle Rental Management System</h2>
+        </div>
+        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">
+          CIC-357 Software Engineering Lab | MAIT, GGSIPU Delhi
+        </p>
+      </div>
+      <div style="text-align: right;">
+        <h3 style="margin: 0; font-size: 1.15rem; color: #2563eb;">RETURN RECEIPT</h3>
+        <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; color: #475569;">
+          Receipt: <strong>RCPT-{{ "%05d"|format(rental.Rental_ID) }}-{{ booking.Booking_ID }}</strong>
+        </p>
+        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">
+          {{ rental.Actual_Return_Date.strftime('%d %b %Y, %I:%M %p') if rental.Actual_Return_Date else 'Pending' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Customer and Vehicle Particulars -->
+    <div class="grid-2">
+      <div>
+        <div class="section-title">Customer Details</div>
+        <strong>{{ booking.customer.Customer_Name }}</strong><br>
+        <span style="font-size: 0.85rem; color: #475569;">License: {{ booking.customer.License_Number }}</span><br>
+        <span style="font-size: 0.85rem; color: #475569;">Email: {{ booking.customer.Email }}</span><br>
+        <span style="font-size: 0.85rem; color: #475569;">Phone: {{ booking.customer.Phone }}</span>
+      </div>
+      <div>
+        <div class="section-title">Rented Vehicle Details</div>
+        <strong>{{ booking.vehicle.Model }}</strong><br>
+        <span style="font-size: 0.85rem; color: #475569;">Registration: {{ booking.vehicle.Registration_Number }}</span><br>
+        <span style="font-size: 0.85rem; color: #475569;">Category: {{ booking.vehicle.Vehicle_Type }}</span><br>
+        <span style="font-size: 0.85rem; color: #475569;">Daily Tariff: ₹{{ booking.vehicle.Rental_Rate }} / day</span>
+      </div>
+    </div>
+
+    <!-- Rental Period & Odometer Readings -->
+    <div class="grid-2" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+      <div>
+        <div class="section-title">Rental Timeline</div>
+        <span style="font-size: 0.85rem;"><strong>Pickup:</strong> {{ rental.Actual_Pickup_Date.strftime('%d %b %Y, %I:%M %p') }}</span><br>
+        <span style="font-size: 0.85rem;"><strong>Return:</strong> {{ rental.Actual_Return_Date.strftime('%d %b %Y, %I:%M %p') if rental.Actual_Return_Date else '-' }}</span><br>
+        <span style="font-size: 0.85rem;"><strong>Scheduled:</strong> {{ booking.Pickup_Date }} &rarr; {{ booking.Return_Date }}</span>
+      </div>
+      <div>
+        <div class="section-title">Odometer & Distance</div>
+        <span style="font-size: 0.85rem;"><strong>Opening:</strong> {{ rental.Start_Odometer }} km</span><br>
+        <span style="font-size: 0.85rem;"><strong>Closing:</strong> {{ rental.End_Odometer if rental.End_Odometer else '-' }} km</span><br>
+        <span style="font-size: 0.85rem;"><strong>Distance Traveled:</strong> {{ (rental.End_Odometer - rental.Start_Odometer)|round(1) if rental.End_Odometer else 0 }} km</span>
+      </div>
+    </div>
+
+    <!-- Itemized Financial Breakdown Table -->
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Rate / Unit</th>
+          <th>Qty / Days</th>
+          <th style="text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Base Vehicle Rental Charge</td>
+          <td>₹{{ booking.vehicle.Rental_Rate }}</td>
+          <td>{{ booking.duration_days }} days</td>
+          <td style="text-align: right;">₹{{ "%.2f"|format(booking.Total_Amount) }}</td>
+        </tr>
+        {% if rental.Late_Fee > 0 %}
+        <tr>
+          <td style="color: #dc2626;">Late Return Fine (1.5x Daily Tariff)</td>
+          <td>₹{{ (booking.vehicle.Rental_Rate * 1.5)|round(2) }}</td>
+          <td>Late Penalty</td>
+          <td style="text-align: right; color: #dc2626;">+₹{{ "%.2f"|format(rental.Late_Fee) }}</td>
+        </tr>
+        {% endif %}
+        {% if rental.Damage_Fee > 0 %}
+        <tr>
+          <td style="color: #ea580c;">Vehicle Damage Assessment Fee</td>
+          <td>Inspection Fee</td>
+          <td>{{ rental.Damage_Notes or "Damage Reported" }}</td>
+          <td style="text-align: right; color: #ea580c;">+₹{{ "%.2f"|format(rental.Damage_Fee) }}</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <!-- Totals and Payment Proof -->
+    <div class="total-box">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
+        <span>Grand Contract Total:</span>
+        <strong>₹{{ "%.2f"|format(booking.Total_Amount + rental.Extra_Charges) }}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem; color: #166534;">
+        <span>Total Payments Cleared:</span>
+        <strong>₹{{ "%.2f"|format(booking.Total_Amount + rental.Extra_Charges) }}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 800; border-top: 1px solid #cbd5e1; padding-top: 0.5rem;">
+        <span>Balance Due:</span>
+        <span style="color: #15803d;">₹0.00 (Fully Settled)</span>
+      </div>
+    </div>
+
+    <!-- Payments Ledger -->
+    <div style="margin-top: 1.5rem;">
+      <div class="section-title">Transactions Recorded</div>
+      <ul style="list-style: none; padding: 0; font-size: 0.85rem; color: #475569;">
+        {% for p in booking.payments %}
+          <li style="padding: 0.25rem 0; border-bottom: 1px dashed #e2e8f0; display: flex; justify-content: space-between;">
+            <span>{{ p.Payment_Purpose }} ({{ p.Payment_Method }} - <code>{{ p.Transaction_Ref }}</code>)</span>
+            <strong>₹{{ "%.2f"|format(p.Amount) }} [{{ p.Payment_Status }}]</strong>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div style="margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; text-align: center; font-size: 0.75rem; color: #94a3b8;">
+      Thank you for choosing VRMS! This is a computer-generated return receipt for CIC-357 Software Engineering Lab.
+    </div>
+  </div>
+
+</body>
+</html>

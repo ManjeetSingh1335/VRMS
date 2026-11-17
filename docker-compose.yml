@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: vrms_web_app
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=vrms-docker-secret-key-cic357
+      - DATABASE_URL=postgresql://vrms_user:vrms_password@postgres_db:5432/vrms_db
+      - GREEN_CACHE_TTL_SECONDS=120
+      - PORT=5000
+    depends_on:
+      - postgres_db
+    volumes:
+      - ./backups:/app/backups
+
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: vrms_postgres_db
+    restart: always
+    environment:
+      - POSTGRES_USER=vrms_user
+      - POSTGRES_PASSWORD=vrms_password
+      - POSTGRES_DB=vrms_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - vrms_pgdata:/var/lib/postgresql/data
+
+volumes:
+  vrms_pgdata:

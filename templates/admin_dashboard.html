@@ -1,0 +1,626 @@
+{% extends "base.html" %}
+
+{% block title %}Administrator Dashboard - VRMS{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: #0f172a;">Administrator Control Panel</h1>
+      <p style="color: #64748b; font-size: 0.95rem;">
+        Enterprise Fleet Management, Customer Records, Transactions, and Financial Reports (FR-2, FR-7)
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <button class="btn btn-primary" onclick="openModal('addVehicleModal')">+ Add New Vehicle</button>
+      <button class="btn btn-outline" onclick="loadAllAdminData()">Refresh Dashboard</button>
+    </div>
+  </div>
+
+  <!-- KPI Summary Cards -->
+  <div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="card" style="margin-bottom: 0;">
+      <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Fleet Size</span>
+      <h3 id="kpiFleet" style="font-size: 1.85rem; font-weight: 800; color: #0f172a; margin-top: 0.25rem;">0</h3>
+      <span style="font-size: 0.8rem; color: #16a34a;">Active registered vehicles</span>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+      <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Bookings</span>
+      <h3 id="kpiBookings" style="font-size: 1.85rem; font-weight: 800; color: #2563eb; margin-top: 0.25rem;">0</h3>
+      <span style="font-size: 0.8rem; color: #64748b;">Customer reservations</span>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+      <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Revenue</span>
+      <h3 id="kpiRevenue" style="font-size: 1.85rem; font-weight: 800; color: #059669; margin-top: 0.25rem;">₹0.00</h3>
+      <span style="font-size: 0.8rem; color: #16a34a;">Payments & settlements</span>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+      <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Fleet Utilization</span>
+      <h3 id="kpiUtilization" style="font-size: 1.85rem; font-weight: 800; color: #d97706; margin-top: 0.25rem;">0%</h3>
+      <span style="font-size: 0.8rem; color: #64748b;">Booked & Rented ratio</span>
+    </div>
+  </div>
+
+  <!-- Interactive Analytics Charts (FR-7 Reports) -->
+  <div class="grid-3" style="margin-bottom: 2rem;">
+    <div class="card" style="margin-bottom: 0;">
+      <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Fleet Status Breakdown</h4>
+      <div style="height: 220px; position: relative;">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+      <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Revenue by Payment Method</h4>
+      <div style="height: 220px; position: relative;">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+      <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Most Popular Vehicles</h4>
+      <div style="height: 220px; position: relative;">
+        <canvas id="topVehiclesChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Sub-Navigation Tabs -->
+  <div style="display: flex; gap: 1rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
+    <button id="tabBtnVehicles" class="btn btn-outline" style="border: none; border-bottom: 3px solid var(--primary); border-radius: 0; padding-bottom: 0.75rem; font-weight: 700; color: var(--primary);" onclick="showAdminTab('vehiclesTab')">
+      🚗 Fleet Management (CRUD)
+    </button>
+    <button id="tabBtnCustomers" class="btn btn-outline" style="border: none; border-bottom: 3px solid transparent; border-radius: 0; padding-bottom: 0.75rem; font-weight: 600; color: var(--text-muted);" onclick="showAdminTab('customersTab')">
+      👥 Customer Registry
+    </button>
+    <button id="tabBtnAllBookings" class="btn btn-outline" style="border: none; border-bottom: 3px solid transparent; border-radius: 0; padding-bottom: 0.75rem; font-weight: 600; color: var(--text-muted);" onclick="showAdminTab('allBookingsTab')">
+      📑 All Bookings
+    </button>
+    <button id="tabBtnPayments" class="btn btn-outline" style="border: none; border-bottom: 3px solid transparent; border-radius: 0; padding-bottom: 0.75rem; font-weight: 600; color: var(--text-muted);" onclick="showAdminTab('paymentsTab')">
+      💳 Payment Ledger
+    </button>
+  </div>
+
+  <!-- TAB 1: Fleet Management CRUD -->
+  <div id="vehiclesTab">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Fleet Vehicles Inventory (FR-2)</h3>
+        <button class="btn btn-sm btn-primary" onclick="openModal('addVehicleModal')">+ Add Vehicle</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Registration</th>
+              <th>Model</th>
+              <th>Category</th>
+              <th>Rental Rate</th>
+              <th>Odometer</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminVehiclesTableBody">
+            <tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading fleet records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Customer Registry -->
+  <div id="customersTab" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Registered Customer Records (FR-1)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Customer ID</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Driving License</th>
+              <th>Role</th>
+              <th>Address</th>
+            </tr>
+          </thead>
+          <tbody id="adminCustomersTableBody">
+            <tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading customer records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: All Bookings -->
+  <div id="allBookingsTab" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">All Booking Contracts & Status (FR-4)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Booking ID</th>
+              <th>Customer</th>
+              <th>Vehicle</th>
+              <th>Pickup & Return</th>
+              <th>Duration</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminBookingsTableBody">
+            <tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading bookings...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Payment Ledger -->
+  <div id="paymentsTab" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Payment & Settlement Transactions (FR-5)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Payment ID</th>
+              <th>Booking Ref</th>
+              <th>Amount</th>
+              <th>Payment Method</th>
+              <th>Purpose</th>
+              <th>Status</th>
+              <th>Transaction Ref</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="adminPaymentsTableBody">
+            <tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading payments...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Vehicle -->
+<div id="addVehicleModal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal('addVehicleModal')">&times;</button>
+    <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">Add Vehicle to Fleet</h3>
+    
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Registration Number *</label>
+        <input type="text" id="addReg" class="form-control" placeholder="DL-01-XX-9999" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vehicle Type / Category *</label>
+        <select id="addType" class="form-control">
+          <option value="Sedan">Sedan</option>
+          <option value="SUV">SUV</option>
+          <option value="Hatchback">Hatchback</option>
+          <option value="Luxury">Luxury</option>
+          <option value="Truck">Truck</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Make & Model *</label>
+      <input type="text" id="addModel" class="form-control" placeholder="e.g. Skoda Octavia 2.0 TDI" required>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Daily Rental Rate (₹) *</label>
+        <input type="number" id="addRate" class="form-control" placeholder="2800" min="1" step="50" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Current Odometer (km)</label>
+        <input type="number" id="addOdo" class="form-control" placeholder="12000" min="0">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Image URL</label>
+      <input type="url" id="addImage" class="form-control" placeholder="https://images.unsplash.com/...">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Features / Specifications</label>
+      <input type="text" id="addFeatures" class="form-control" placeholder="Automatic, 5-seater, Sunroof">
+    </div>
+
+    <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="submitAddVehicle()">
+      Save Vehicle
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: Edit Vehicle -->
+<div id="editVehicleModal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal('editVehicleModal')">&times;</button>
+    <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">Update Vehicle</h3>
+    <input type="hidden" id="editVehicleId">
+
+    <div class="form-group">
+      <label class="form-label">Make & Model</label>
+      <input type="text" id="editModel" class="form-control">
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select id="editType" class="form-control">
+          <option value="Sedan">Sedan</option>
+          <option value="SUV">SUV</option>
+          <option value="Hatchback">Hatchback</option>
+          <option value="Luxury">Luxury</option>
+          <option value="Truck">Truck</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Daily Rental Rate (₹)</label>
+        <input type="number" id="editRate" class="form-control" min="1">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Availability Status</label>
+        <select id="editStatus" class="form-control">
+          <option value="Available">Available</option>
+          <option value="Booked">Booked</option>
+          <option value="Rented">Rented</option>
+          <option value="Under Maintenance">Under Maintenance</option>
+          <option value="Retired">Retired</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Odometer (km)</label>
+        <input type="number" id="editOdo" class="form-control">
+      </div>
+    </div>
+
+    <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="submitEditVehicle()">
+      Save Changes
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let chartStatus = null;
+let chartRevenue = null;
+let chartTop = null;
+
+function showAdminTab(tabId) {
+    const tabs = ['vehiclesTab', 'customersTab', 'allBookingsTab', 'paymentsTab'];
+    tabs.forEach(t => {
+        document.getElementById(t).style.display = t === tabId ? 'block' : 'none';
+    });
+
+    const btnMap = {
+        'vehiclesTab': 'tabBtnVehicles',
+        'customersTab': 'tabBtnCustomers',
+        'allBookingsTab': 'tabBtnAllBookings',
+        'paymentsTab': 'tabBtnPayments'
+    };
+
+    Object.keys(btnMap).forEach(k => {
+        const btn = document.getElementById(btnMap[k]);
+        btn.style.borderBottom = k === tabId ? '3px solid var(--primary)' : '3px solid transparent';
+        btn.style.color = k === tabId ? 'var(--primary)' : 'var(--text-muted)';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadAllAdminData();
+});
+
+async function loadAllAdminData() {
+    loadReports();
+    loadVehiclesTable();
+    loadCustomersTable();
+    loadBookingsTable();
+    loadPaymentsTable();
+}
+
+async function loadReports() {
+    try {
+        const resp = await fetch('/api/admin/reports');
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('kpiFleet').innerText = data.kpis.total_vehicles;
+            document.getElementById('kpiBookings').innerText = data.kpis.total_bookings;
+            document.getElementById('kpiRevenue').innerText = `₹${data.kpis.total_revenue.toLocaleString('en-IN')}`;
+            document.getElementById('kpiUtilization').innerText = `${data.kpis.utilization_rate}%`;
+
+            renderCharts(data);
+        }
+    } catch (e) {
+        console.error('Failed loading reports:', e);
+    }
+}
+
+function renderCharts(data) {
+    // 1. Status Doughnut
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    if (chartStatus) chartStatus.destroy();
+    chartStatus = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data.status_distribution),
+            datasets: [{
+                data: Object.values(data.status_distribution),
+                backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#f97316', '#94a3b8']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+
+    // 2. Revenue by Method
+    const revCtx = document.getElementById('revenueChart').getContext('2d');
+    if (chartRevenue) chartRevenue.destroy();
+    chartRevenue = new Chart(revCtx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(data.revenue_by_method),
+            datasets: [{
+                data: Object.values(data.revenue_by_method),
+                backgroundColor: ['#6366f1', '#ec4899', '#14b8a6', '#f43f5e']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+
+    // 3. Top Vehicles Bar
+    const topCtx = document.getElementById('topVehiclesChart').getContext('2d');
+    if (chartTop) chartTop.destroy();
+    chartTop = new Chart(topCtx, {
+        type: 'bar',
+        data: {
+            labels: data.top_vehicles.map(v => v.model),
+            datasets: [{
+                label: 'Bookings Count',
+                data: data.top_vehicles.map(v => v.bookings_count),
+                backgroundColor: '#2563eb'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+
+async function loadVehiclesTable() {
+    const tbody = document.getElementById('adminVehiclesTableBody');
+    try {
+        const resp = await fetch('/api/admin/vehicles');
+        const data = await resp.json();
+        if (data.success) {
+            tbody.innerHTML = data.vehicles.map(v => `
+                <tr>
+                    <td><strong>#${v.Vehicle_ID}</strong></td>
+                    <td><strong>${v.Registration_Number}</strong></td>
+                    <td>${v.Model}</td>
+                    <td>${v.Vehicle_Type}</td>
+                    <td><strong>₹${v.Rental_Rate}</strong></td>
+                    <td>${v.Current_Odometer} km</td>
+                    <td><span class="badge badge-${v.Availability_Status.toLowerCase().replace(' ', '-')}">${v.Availability_Status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick='openEditVehicle(${JSON.stringify(v)})'>Edit</button>
+                        ${v.Availability_Status !== 'Retired' ? `
+                            <button class="btn btn-sm btn-danger" onclick="deactivateVehicle(${v.Vehicle_ID})">Deactivate</button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color:red; text-align:center;">Failed to load fleet table.</td></tr>`;
+    }
+}
+
+async function loadCustomersTable() {
+    const tbody = document.getElementById('adminCustomersTableBody');
+    try {
+        const resp = await fetch('/api/admin/customers');
+        const data = await resp.json();
+        if (data.success) {
+            tbody.innerHTML = data.customers.map(c => `
+                <tr>
+                    <td><strong>#${c.Customer_ID}</strong></td>
+                    <td><strong>${c.Customer_Name}</strong></td>
+                    <td>${c.Email}</td>
+                    <td>${c.Phone}</td>
+                    <td><code>${c.License_Number}</code></td>
+                    <td><span class="role-pill ${c.Role === 'Administrator' ? 'role-admin' : c.Role === 'Rental Staff' ? 'role-staff' : 'role-customer'}">${c.Role}</span></td>
+                    <td style="max-width: 200px; font-size: 0.8rem;">${c.Address}</td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:red; text-align:center;">Failed to load customers.</td></tr>`;
+    }
+}
+
+async function loadBookingsTable() {
+    const tbody = document.getElementById('adminBookingsTableBody');
+    try {
+        const resp = await fetch('/api/admin/bookings');
+        const data = await resp.json();
+        if (data.success) {
+            tbody.innerHTML = data.bookings.map(b => `
+                <tr>
+                    <td><strong>#${b.Booking_ID}</strong></td>
+                    <td>${b.Customer_Name}<br><small style="color:#64748b;">${b.Customer_Email}</small></td>
+                    <td>${b.Vehicle_Model}<br><small style="color:#64748b;">${b.Vehicle_Registration}</small></td>
+                    <td>${b.Pickup_Date} &rarr; ${b.Return_Date}</td>
+                    <td>${b.Duration_Days} days</td>
+                    <td><strong>₹${b.Total_Amount.toFixed(2)}</strong></td>
+                    <td><span class="badge badge-${b.Booking_Status.toLowerCase()}">${b.Booking_Status}</span></td>
+                    <td>
+                        ${b.Rental_ID ? `
+                            <a href="/receipt/${b.Booking_ID}" target="_blank" class="btn btn-sm btn-outline">Receipt</a>
+                        ` : '-'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color:red; text-align:center;">Failed to load bookings.</td></tr>`;
+    }
+}
+
+async function loadPaymentsTable() {
+    const tbody = document.getElementById('adminPaymentsTableBody');
+    try {
+        const resp = await fetch('/api/admin/payments');
+        const data = await resp.json();
+        if (data.success) {
+            tbody.innerHTML = data.payments.map(p => `
+                <tr>
+                    <td><strong>#${p.Payment_ID}</strong></td>
+                    <td>Booking #${p.Booking_ID || p.Rental_ID}</td>
+                    <td><strong>₹${p.Amount.toFixed(2)}</strong></td>
+                    <td>${p.Payment_Method}</td>
+                    <td>${p.Payment_Purpose}</td>
+                    <td><span class="badge badge-${p.Payment_Status.toLowerCase()}">${p.Payment_Status}</span></td>
+                    <td><code>${p.Transaction_Ref}</code></td>
+                    <td style="font-size: 0.8rem;">${p.Payment_Date}</td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color:red; text-align:center;">Failed to load payments.</td></tr>`;
+    }
+}
+
+async function submitAddVehicle() {
+    const reg = document.getElementById('addReg').value.trim();
+    const model = document.getElementById('addModel').value.trim();
+    const type = document.getElementById('addType').value;
+    const rate = parseFloat(document.getElementById('addRate').value);
+    const odo = parseFloat(document.getElementById('addOdo').value || 0);
+    const image = document.getElementById('addImage').value.trim();
+    const features = document.getElementById('addFeatures').value.trim();
+
+    if (!reg || !model || !rate) {
+        showToast('Please fill all required fields.', 'warning');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/admin/vehicles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                registration_number: reg,
+                model: model,
+                vehicle_type: type,
+                rental_rate: rate,
+                current_odometer: odo,
+                image_url: image,
+                features: features
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showToast('Vehicle added to fleet successfully!', 'success');
+            closeModal('addVehicleModal');
+            loadVehiclesTable();
+            loadReports();
+        } else {
+            showToast(data.error, 'danger');
+        }
+    } catch (e) {
+        showToast('Error adding vehicle: ' + e.message, 'danger');
+    }
+}
+
+function openEditVehicle(v) {
+    document.getElementById('editVehicleId').value = v.Vehicle_ID;
+    document.getElementById('editModel').value = v.Model;
+    document.getElementById('editType').value = v.Vehicle_Type;
+    document.getElementById('editRate').value = v.Rental_Rate;
+    document.getElementById('editStatus').value = v.Availability_Status;
+    document.getElementById('editOdo').value = v.Current_Odometer;
+    openModal('editVehicleModal');
+}
+
+async function submitEditVehicle() {
+    const id = document.getElementById('editVehicleId').value;
+    const model = document.getElementById('editModel').value;
+    const type = document.getElementById('editType').value;
+    const rate = parseFloat(document.getElementById('editRate').value);
+    const status = document.getElementById('editStatus').value;
+    const odo = parseFloat(document.getElementById('editOdo').value);
+
+    try {
+        const resp = await fetch(`/api/admin/vehicles/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                vehicle_type: type,
+                rental_rate: rate,
+                availability_status: status,
+                current_odometer: odo
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showToast('Vehicle updated successfully!', 'success');
+            closeModal('editVehicleModal');
+            loadVehiclesTable();
+            loadReports();
+        } else {
+            showToast(data.error, 'danger');
+        }
+    } catch (e) {
+        showToast(e.message, 'danger');
+    }
+}
+
+async function deactivateVehicle(id) {
+    if (!confirm(`Are you sure you want to deactivate/retire vehicle #${id}?`)) return;
+
+    try {
+        const resp = await fetch(`/api/admin/vehicles/${id}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (data.success) {
+            showToast(data.message, 'warning');
+            loadVehiclesTable();
+            loadReports();
+        } else {
+            showToast(data.error, 'danger');
+        }
+    } catch (e) {
+        showToast(e.message, 'danger');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Portal - VRMS{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <!-- Welcome header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: #0f172a;">Welcome, {{ user.Customer_Name }}!</h1>
+      <p style="color: #64748b; font-size: 0.95rem;">
+        Driving License: <strong style="color: #1e293b;">{{ user.License_Number }}</strong> | Phone: {{ user.Phone }}
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <button class="btn btn-outline" onclick="openProfileModal()">Update Profile</button>
+      <button class="btn btn-primary" onclick="showTab('bookingsTab')">My Bookings (<span id="myBookingsCount">0</span>)</button>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div style="display: flex; gap: 1rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
+    <button id="tabBtnSearch" class="btn btn-outline" style="border: none; border-bottom: 3px solid var(--primary); border-radius: 0; padding-bottom: 0.75rem; font-weight: 700; color: var(--primary);" onclick="showTab('searchTab')">
+      🚗 Browse & Reserve Vehicles
+    </button>
+    <button id="tabBtnBookings" class="btn btn-outline" style="border: none; border-bottom: 3px solid transparent; border-radius: 0; padding-bottom: 0.75rem; font-weight: 600; color: var(--text-muted);" onclick="showTab('bookingsTab')">
+      📋 My Bookings & Rental History
+    </button>
+  </div>
+
+  <!-- TAB 1: Search & Booking -->
+  <div id="searchTab">
+    <!-- Search / Filter Card -->
+    <div class="card" style="background: #ffffff; border: 1px solid var(--border);">
+      <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">
+        🔍 Check Vehicle Availability (FR-3: Overlap Prevention Enabled)
+      </h3>
+      <div class="grid-4" style="align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Pickup Date</label>
+          <input type="date" id="searchPickup" class="form-control">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Return Date</label>
+          <input type="date" id="searchReturn" class="form-control">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Vehicle Type</label>
+          <select id="searchType" class="form-control">
+            <option value="All">All Categories</option>
+            <option value="Sedan">Sedan</option>
+            <option value="SUV">SUV</option>
+            <option value="Hatchback">Hatchback</option>
+            <option value="Luxury">Luxury</option>
+            <option value="Truck">Truck</option>
+          </select>
+        </div>
+        <div>
+          <button class="btn btn-primary" style="width: 100%;" onclick="loadVehicles(1)">
+            Search Available Fleet
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Vehicle Results -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h2 style="font-size: 1.35rem; font-weight: 700; color: #0f172a;">
+        Available Fleet (<span id="fleetCount">0</span> vehicles)
+      </h2>
+      <div id="paginationControls" style="display: flex; gap: 0.5rem;"></div>
+    </div>
+
+    <div id="vehiclesGrid" class="grid-3">
+      <!-- Injected via JavaScript -->
+    </div>
+  </div>
+
+  <!-- TAB 2: My Bookings -->
+  <div id="bookingsTab" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">My Bookings & Rentals</h2>
+        <button class="btn btn-sm btn-outline" onclick="loadMyBookings()">Refresh</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Booking ID</th>
+              <th>Vehicle</th>
+              <th>Rental Dates</th>
+              <th>Duration</th>
+              <th>Total Rent</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="myBookingsTableBody">
+            <tr><td colspan="7" style="text-align:center; padding: 2rem;">Loading your bookings...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Booking Preview & Payment Screen -->
+<div id="bookingModal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal('bookingModal')">&times;</button>
+    <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a;">Reserve Vehicle</h2>
+    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+      Review rental duration, base charges, and complete payment
+    </p>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+      <h4 id="modalVehicleModel" style="font-size: 1.1rem; color: #0f172a; margin-bottom: 0.25rem;">-</h4>
+      <p style="font-size: 0.85rem; color: #64748b;" id="modalVehicleReg">-</p>
+      <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-weight: 600;">
+        <span>Daily Rate:</span>
+        <span id="modalDailyRate">₹0 / day</span>
+      </div>
+    </div>
+
+    <!-- Dates selection inside modal -->
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Pickup Date *</label>
+        <input type="date" id="modalPickupDate" class="form-control" onchange="calculatePricePreview()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Return Date *</label>
+        <input type="date" id="modalReturnDate" class="form-control" onchange="calculatePricePreview()">
+      </div>
+    </div>
+
+    <!-- Live Rent Price Preview Box -->
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.9rem;">
+        <span>Rental Duration:</span>
+        <strong id="modalDurationDays">0 days</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 800; color: #1e40af;">
+        <span>Total Rent:</span>
+        <span id="modalTotalRent">₹0.00</span>
+      </div>
+      <div id="availabilityNotice" style="margin-top: 0.5rem; font-size: 0.82rem; color: #166534;"></div>
+    </div>
+
+    <!-- Mock Payment Gateway Form -->
+    <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem;">Payment Gateway Details</h4>
+    <div class="form-group">
+      <label class="form-label">Payment Method</label>
+      <select id="modalPaymentMethod" class="form-control">
+        <option value="Credit Card">Credit Card (Visa / Mastercard)</option>
+        <option value="Debit Card">Debit Card</option>
+        <option value="UPI">UPI / QR Code</option>
+        <option value="Net Banking">Net Banking</option>
+      </select>
+    </div>
+
+    <!-- Simulated Gateway Failure Test Toggle -->
+    <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 0.65rem; margin-bottom: 1.25rem;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #92400e; cursor: pointer;">
+        <input type="checkbox" id="simulatePaymentFailure">
+        <span>Simulate Payment Gateway Failure (TC-07 test rollback)</span>
+      </label>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem;">
+      <button class="btn btn-outline" style="flex: 1;" onclick="closeModal('bookingModal')">Cancel</button>
+      <button id="btnConfirmBooking" class="btn btn-primary" style="flex: 2;" onclick="submitBooking()">
+        Pay & Confirm Reservation
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Update Profile -->
+<div id="profileModal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal('profileModal')">&times;</button>
+    <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">Update Personal Details (FR-1)</h2>
+    
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input type="text" id="profName" class="form-control" value="{{ user.Customer_Name }}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone</label>
+      <input type="text" id="profPhone" class="form-control" value="{{ user.Phone }}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">License Number</label>
+      <input type="text" id="profLicense" class="form-control" value="{{ user.License_Number }}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Address</label>
+      <textarea id="profAddress" class="form-control" rows="2">{{ user.Address }}</textarea>
+    </div>
+
+    <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="saveProfile()">
+      Save Changes
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentSelectedVehicle = null;
+
+// Tab switcher
+function showTab(tabId) {
+    document.getElementById('searchTab').style.display = tabId === 'searchTab' ? 'block' : 'none';
+    document.getElementById('bookingsTab').style.display = tabId === 'bookingsTab' ? 'block' : 'none';
+
+    document.getElementById('tabBtnSearch').style.borderBottom = tabId === 'searchTab' ? '3px solid var(--primary)' : '3px solid transparent';
+    document.getElementById('tabBtnSearch').style.color = tabId === 'searchTab' ? 'var(--primary)' : 'var(--text-muted)';
+
+    document.getElementById('tabBtnBookings').style.borderBottom = tabId === 'bookingsTab' ? '3px solid var(--primary)' : '3px solid transparent';
+    document.getElementById('tabBtnBookings').style.color = tabId === 'bookingsTab' ? 'var(--primary)' : 'var(--text-muted)';
+
+    if (tabId === 'bookingsTab') {
+        loadMyBookings();
+    }
+}
+
+// Set default search dates (tomorrow to +3 days)
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const threeDays = new Date(tomorrow);
+    threeDays.setDate(threeDays.getDate() + 3);
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const toYMD = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    document.getElementById('searchPickup').value = toYMD(tomorrow);
+    document.getElementById('searchReturn').value = toYMD(threeDays);
+    document.getElementById('searchPickup').min = toYMD(today);
+    document.getElementById('searchReturn').min = toYMD(tomorrow);
+
+    loadVehicles(1);
+    loadMyBookings();
+});
+
+// Load available vehicles with pagination and selective projection
+async function loadVehicles(page = 1) {
+    const pickup = document.getElementById('searchPickup').value;
+    const returnD = document.getElementById('searchReturn').value;
+    const type = document.getElementById('searchType').value;
+
+    const grid = document.getElementById('vehiclesGrid');
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem;">Loading fleet availability...</div>';
+
+    try {
+        const query = new URLSearchParams({
+            pickup_date: pickup,
+            return_date: returnD,
+            type: type,
+            page: page,
+            page_size: 6
+        });
+        const resp = await fetch(`/api/vehicles/search?${query.toString()}`);
+        const data = await resp.json();
+
+        if (!data.success) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; color: var(--danger); text-align: center;">${data.error}</div>`;
+            return;
+        }
+
+        document.getElementById('fleetCount').innerText = data.total;
+
+        if (data.vehicles.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 3rem; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <h3>No vehicles available for these dates</h3>
+                    <p style="color: #64748b; margin-top: 0.5rem;">Try adjusting your dates or category filters.</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = data.vehicles.map(v => `
+            <div class="vehicle-card">
+                <div class="vehicle-img-wrap">
+                    <img src="${v.Image_URL || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=500'}" class="vehicle-img" alt="${v.Model}">
+                    <span class="badge badge-${v.Availability_Status.toLowerCase().replace(' ', '-')}" style="position: absolute; top: 10px; right: 10px;">
+                        ${v.Availability_Status}
+                    </span>
+                </div>
+                <div class="vehicle-card-body">
+                    <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.5px;">
+                        ${v.Vehicle_Type}
+                    </span>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0.25rem 0 0.5rem 0; color: #0f172a;">
+                        ${v.Model}
+                    </h3>
+                    <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">
+                        Reg: <strong>${v.Registration_Number}</strong>
+                    </p>
+                    <div style="margin-top: auto; display: flex; align-items: center; justify-content: space-between;">
+                        <div class="vehicle-price">
+                            ₹${v.Rental_Rate} <span>/ day</span>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="openBookingModal(${v.Vehicle_ID})">
+                            Book Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Render pagination controls
+        renderPagination(data.page, data.total_pages);
+    } catch (e) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; color: var(--danger); text-align: center;">Error loading vehicles: ${e.message}</div>`;
+    }
+}
+
+function renderPagination(current, total) {
+    const el = document.getElementById('paginationControls');
+    if (total <= 1) {
+        el.innerHTML = '';
+        return;
+    }
+    let html = '';
+    for (let i = 1; i <= total; i++) {
+        html += `<button class="btn btn-sm ${i === current ? 'btn-primary' : 'btn-outline'}" onclick="loadVehicles(${i})">${i}</button>`;
+    }
+    el.innerHTML = html;
+}
+
+// Open booking modal for selected vehicle
+async function openBookingModal(vehicleId) {
+    try {
+        const resp = await fetch(`/api/vehicles/${vehicleId}`);
+        const data = await resp.json();
+        if (!data.success) {
+            showToast(data.error, 'danger');
+            return;
+        }
+
+        currentSelectedVehicle = data.vehicle;
+        document.getElementById('modalVehicleModel').innerText = currentSelectedVehicle.Model;
+        document.getElementById('modalVehicleReg').innerText = `Reg No: ${currentSelectedVehicle.Registration_Number} | ${currentSelectedVehicle.Vehicle_Type}`;
+        document.getElementById('modalDailyRate').innerText = `₹${currentSelectedVehicle.Rental_Rate} / day`;
+
+        // Copy search dates into modal
+        document.getElementById('modalPickupDate').value = document.getElementById('searchPickup').value;
+        document.getElementById('modalReturnDate').value = document.getElementById('searchReturn').value;
+
+        calculatePricePreview();
+        openModal('bookingModal');
+    } catch (e) {
+        showToast('Failed to load vehicle details: ' + e.message, 'danger');
+    }
+}
+
+// Price calculation preview
+async function calculatePricePreview() {
+    if (!currentSelectedVehicle) return;
+
+    const pickup = document.getElementById('modalPickupDate').value;
+    const returnD = document.getElementById('modalReturnDate').value;
+
+    if (!pickup || !returnD) return;
+
+    try {
+        const resp = await fetch('/api/bookings/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                vehicle_id: currentSelectedVehicle.Vehicle_ID,
+                pickup_date: pickup,
+                return_date: returnD
+            })
+        });
+        const data = await resp.json();
+        const notice = document.getElementById('availabilityNotice');
+        const btn = document.getElementById('btnConfirmBooking');
+
+        if (data.success) {
+            document.getElementById('modalDurationDays').innerText = `${data.duration_days} day(s)`;
+            document.getElementById('modalTotalRent').innerText = `₹${data.total_rent.toFixed(2)}`;
+
+            if (data.is_available) {
+                notice.style.color = '#15803d';
+                notice.innerText = '✅ Vehicle is Available for this date interval.';
+                btn.disabled = false;
+            } else {
+                notice.style.color = '#dc2626';
+                notice.innerText = '⚠️ Vehicle is already booked for overlapping dates!';
+                btn.disabled = true;
+            }
+        } else {
+            notice.style.color = '#dc2626';
+            notice.innerText = data.error;
+            btn.disabled = true;
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// Submit Booking with Payment
+async function submitBooking() {
+    if (!currentSelectedVehicle) return;
+
+    const pickup = document.getElementById('modalPickupDate').value;
+    const returnD = document.getElementById('modalReturnDate').value;
+    const method = document.getElementById('modalPaymentMethod').value;
+    const simulateFailure = document.getElementById('simulatePaymentFailure').checked;
+
+    const btn = document.getElementById('btnConfirmBooking');
+    btn.disabled = true;
+    btn.innerText = 'Processing Payment...';
+
+    try {
+        const resp = await fetch('/api/bookings/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                vehicle_id: currentSelectedVehicle.Vehicle_ID,
+                pickup_date: pickup,
+                return_date: returnD,
+                payment_method: method,
+                simulate_payment_failure: simulateFailure
+            })
+        });
+
+        const data = await resp.json();
+        if (data.success) {
+            closeModal('bookingModal');
+            showToast(data.message, 'success');
+            loadVehicles(1);
+            showTab('bookingsTab');
+        } else {
+            showToast(data.error, 'danger');
+        }
+    } catch (e) {
+        showToast('Booking failed: ' + e.message, 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Pay & Confirm Reservation';
+    }
+}
+
+// Load customer bookings
+async function loadMyBookings() {
+    const tbody = document.getElementById('myBookingsTableBody');
+    try {
+        const resp = await fetch('/api/bookings/my');
+        const data = await resp.json();
+
+        if (data.success) {
+            document.getElementById('myBookingsCount').innerText = data.bookings.length;
+
+            if (data.bookings.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">No bookings found. Make your first reservation today!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.bookings.map(b => `
+                <tr>
+                    <td><strong>#${b.Booking_ID}</strong></td>
+                    <td>
+                        <strong>${b.Vehicle_Model}</strong><br>
+                        <small style="color: #64748b;">${b.Vehicle_Registration} (${b.Vehicle_Type})</small>
+                    </td>
+                    <td>${b.Pickup_Date} &rarr; ${b.Return_Date}</td>
+                    <td>${b.Duration_Days} days</td>
+                    <td><strong>₹${b.Total_Amount.toFixed(2)}</strong></td>
+                    <td><span class="badge badge-${b.Booking_Status.toLowerCase()}">${b.Booking_Status}</span></td>
+                    <td>
+                        ${b.Booking_Status === 'Confirmed' ? `
+                            <button class="btn btn-sm btn-danger" onclick="cancelBooking(${b.Booking_ID})">Cancel</button>
+                        ` : ''}
+                        ${b.Rental_ID ? `
+                            <a href="/receipt/${b.Booking_ID}" target="_blank" class="btn btn-sm btn-outline">Receipt</a>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:red; text-align:center;">Failed to load bookings.</td></tr>`;
+    }
+}
+
+// Cancel booking
+async function cancelBooking(bookingId) {
+    if (!confirm(`Are you sure you want to cancel booking #${bookingId}? A 10% cancellation charge applies according to policy.`)) {
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/bookings/${bookingId}/cancel`, { method: 'POST' });
+        const data = await resp.json();
+
+        if (data.success) {
+            showToast(data.message, 'warning');
+            loadMyBookings();
+            loadVehicles(1);
+        } else {
+            showToast(data.error, 'danger');
+        }
+    } catch (e) {
+        showToast('Error cancelling booking: ' + e.message, 'danger');
+    }
+}
+
+// Update Profile
+function openProfileModal() {
+    openModal('profileModal');
+}
+
+async function saveProfile() {
+    const name = document.getElementById('profName').value;
+    const phone = document.getElementById('profPhone').value;
+    const license = document.getElementById('profLicense').value;
+    const address = document.getElementById('profAddress').value;
+
+    try {
+        const resp = await fetch('/api/auth/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, phone, license_number: license, address })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showToast('Profile updated successfully!', 'success');
+            closeModal('profileModal');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(data.error, 'danger');
+        }
+    } catch (e) {
+        showToast(e.message, 'danger');
+    }
+}
+</script>
+{% endblock %}
