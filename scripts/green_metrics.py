@@ -13,7 +13,7 @@ from app.services.green_cache import green_cache
 
 def run_green_software_benchmark():
     print("=" * 80)
-    print("  EXPERIMENT 15: GREEN SOFTWARE COMPUTING BENCHMARK")
+    print("GREEN SOFTWARE COMPUTING BENCHMARK")
     print("  Vehicle Rental Management System (VRMS)")
     print("=" * 80)
     

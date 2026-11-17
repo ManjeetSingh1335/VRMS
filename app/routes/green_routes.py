@@ -5,7 +5,7 @@ green_bp = Blueprint("green", __name__)
 
 @green_bp.route("/api/green-metrics", methods=["GET"])
 def get_green_metrics():
-    """Exp. 15 Green Software metrics comparison endpoint."""
+    """Green Software metrics comparison endpoint."""
     metrics = green_cache.get_metrics()
     return jsonify({
         "success": True,
